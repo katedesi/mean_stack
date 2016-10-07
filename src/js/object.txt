@@ -1,0 +1,358 @@
+1. Single Objects
+	1.1 Kinds of Properties
+		Properties(named data properties)
+		Accessors(named accessor properties)
+		Internal properties(ex. [[Prototype]])
+	1.2 Object Literals
+		var jane = {
+			name: 'Jane',
+			describe: function(){
+				return 'Person named '+this.name;
+			},
+		}
+	1.3 Dot Operator(.) : Accessing Properties via Fixed Keys
+		Getting properties
+			> jane.name			//'Jane'
+			> jane.describe		//[Function]
+		Calling method	
+			> jane.describe()	//'Person named Jane'
+		Setting properties
+			> jane.name = 'John'	//setting
+			> jane.nick = 'Cat'	//create
+		Deleting properties
+			> var obj = {hello: 'world'};
+			> delete obj.hello	//true
+			> obj.hello			//undefined
+			> var obj = {foo: 'a', 'bar': 'b'};
+			> obj.foo = undefined;
+			> Object.keys(obj);	//['foo', 'bar']
+			> delete obj.foo;	//true
+			> Object.keys(obj);	//['bar']
+		Unusual Property Keys
+			> var obj = {var: 'a', function: 'b', 0.7: 'abc', 'not an id': 123};
+			> obj.var 				//'a'
+			> obj.function 			//'b'
+			> obj['0.7']			//'abd'
+			> obj['not an id']		//123
+	1.4 Bracket Operator([반드시_문자열]) : Accessing Properties via Computed Keys
+		Getting properties via the bracket operator
+			> var obj = {someProp: 'abc'};
+			> obj['some'+'Prop'];	//'abc'
+			> var propKey='someProp';
+			> obj[propKey];			//'abc'
+			> var obj = {6: 'bar'};
+			> obj[3+3];				//'bar'	==> []안의 값은 문자로 강제 치환
+			> obj.6					// SyntaxError
+		Calling Methods via the bracket operator
+			> var obj = { myMethod: function(){ return true;}};
+			> obj['myMethod']();	//true
+		Setting properties via the bracket operator
+			> var obj = {};
+			> obj['anotherProp'] = 'def';
+			> obj.anotherPorp;		//'def'
+		Deleting properties via the bracket operator
+			> var obj = {'not an id': 1, prop: 2};
+			> Object.keys(obj);		//[ 'not an id', 'prop' ]
+			> delete obj['not an id'];
+			> Object.keys(obj);		//[ 'prop' ]
+2. Converting Any Value to an Object : using Object()
+	> Object()						//{}
+	> Object() instanceof Object 	//true
+	> Object({})					//{}
+	> Object({}) instanceof Object 	//true
+	> Object('')					//[String: '']
+	> Object('') instanceof Object 	//true
+	> Object('') instanceof String	//true
+3. this as an Implicit Parameter of Functions and Methods
+	Normal functions in sloppy mode
+		> function returnThisSloppy(){return this;}
+		> returnThisSloppy() == global				//true
+	Normal functions in strict mode
+		> function returnThisStrict(){'use strict'; return this;}
+		> returnThisStrict() == undefined			//true
+	Methods
+		> var obj = {method: returnThisStrict};
+		> obj.method() === obj 					//true
+	1. Calling Functions While setting this : call(), apply(), bind()
+			var jane = {
+				name: 'Jane',
+				sayHelloTo: function(otherName){
+					console.log(this.name+' says hello to '+otherName);
+				}
+			};
+		Function.prototype.call(thisValue, arg1?, arg2?, ...)
+			jane.sayHelloTo('Tarzan');
+			jane.sayHelloTo.call(jane, 'Tarzan');
+			var func = jane.sayHelloTo;
+			func.call(jane, 'Tarzan');
+		Function.prototype.apply(thisValue, argArray)
+			jane.sayHelloTo('Tarzan');
+			jane.sayHelloTo.apply(jane, ['Tarzan']);
+			var func = jane.sayHelloTo;
+			func.apply(jane.['Tarzan']);
+		Function.prototype.bind(thisValue, arg1?,...,argN?)
+			jane.sayHelloTo('Tarzan');
+			var func1 = jane.sayHelloTo.bind(jane);
+			func1('Tarzan');
+			var func2 = jane.sayHelloTo.bind(jane, 'Tarzan');
+			func2();
+	2. Pitfall : Losing this When Extracting a Method
+		var counter = {
+			count: 0,
+			inc: function(){
+				this.count++;
+			}
+		};
+		var func = counter.inc;
+		func();
+		counter.count; 	//0
+		var func2 = counter.inc.bind(counter);
+		func2();
+		counter.count;	//1
+		function callIt(cb){
+			cb();
+		}
+		callIt(counter.inc.bind(counter));
+		counter.count;	//2
+	3. Pitfall : Functions Inside Methods Shadow this
+		var obj = {
+			name: 'Jane',
+			friends: ['Tarzan', 'Cheeta'],
+			loop: function(){
+				this.friends.forEach(
+					function(friend){
+						console.log(this.name+' knows '+friend);
+					}
+				);
+			}
+		};
+	4. Traversal
+	Object.getOwnPropertyNames(Object);
+	Object.getOwnPropertyDescriptor(Object, 'getOwnPropertyDescriptor');
+
+4. The Prototype Relationship Between Objects - Inheritance
+	prototype을 숨기자.
+	Function.prototype.method = function(name, func){
+		if( !this.prototype[name] ){
+			this.prototype[name] = func;
+		}
+		return this;
+	}
+
+	Pseudoclassical(의사클래스 방식)
+
+		var Mammal = function(name){
+			this.name = name;
+		};
+		Mammal.prototype.get_name = function(){
+			return this.name;
+		};
+		Mammal.prototype.says = function(){
+			return this.saying || '';
+		}
+		var myMammal = new Mammal('Herb the Mammal');
+		var name = myMammal.get_name();
+
+		'new'는 다음 함수와 같다.
+		Function.method('new', function(){
+			//생성자의 프로토타입을 상속받는 새로운 객체 생성
+			var that = Object.create(this.prototype);
+			
+			//this를 새로운 객체에 바인딩 하면서 생성자 호출
+			var other = this.apply(that, arguments);
+
+			//반환값이 객체가 아니면 새로운 객체로 대체
+			return (typeof other === 'object' && other) || that;
+		});
+
+		var Cat = function(name){
+			this.name = name;
+			this.saying = 'meow';
+		}
+		Cat.prototype = new Mammal();
+		Cat.prototype.purr = function(n) {
+			var i,s = '';
+			for(i=0; i<n; i += 1){
+				if(s) {
+					s += '-';
+				}
+				s += 'r';
+			}
+			return s;
+		};
+		Cat.prototype.get_name = function () {
+			return this.says() + ' ' + this.name + ' ' + this.says();
+		};
+		var myCat = new Cat('Henrietta');
+		var says = myCat.says();
+		var purr = myCat.purr(5);
+		var name = myCat.get_name();
+
+		Function.method('inherits', function(Parent){
+			this.prototype = new Parent();
+			return this;
+		});
+
+		var Cat = function(name) {
+			this.name = name;
+			this.saying = 'meow';
+		}.inherits(Mammal).
+		  method('purr', function(n){
+			var i,s = '';
+			for(i=0; i<n; i += 1){
+				if(s) {
+					s += '-';
+				}
+				s += 'r';
+			}
+			return s;
+		  }).
+		  method('get_name', function(){
+			return this.says() + ' ' + this.name + ' ' + this.says();
+		  });
+
+	Prototype
+		var myMammal = {
+			name: 'Herb the Mammal',
+			get_name: function(){
+				reutnr this.name;
+			},
+			says: function(){
+				return this.saying || '';
+			}
+		};
+		var myCat = Object.create(myMammal);
+		myCat.name = 'Henrietta';
+		myCat.saying = 'meow';
+		myCat.purr = function(n){
+			var i,s = '';
+			for(i=0; i<n; i += 1){
+				if(s) {
+					s += '-';
+				}
+				s += 'r';
+			}
+			return s;
+		};
+		myCat.get_name = function(){
+			return this.says() + ' ' + this.name + ' ' + this.says();
+		};
+
+	Function
+		pseudocode template
+			var constructor = function(spec, my) {
+				var that, 필요한 private변수들;
+				my = my || {};
+
+				공유할 변수와 함수를 my에 추가
+
+				that = 새로운 객체
+
+				앞서 정의한 변술들에 접근할 권한이 있는 메소스들을 that에 추가
+
+				return that;
+			}
+
+		var mammal = function(spec){
+			var that = {};
+
+			that.get_name = function(){
+				return spec.name;
+			};
+
+			that.says = function(){
+				return spec.saying || '';
+			};
+
+			return that;
+		};
+		var myMammal = mammal({name:'Herb'});
+
+		var cat = function(spec){
+			spec.saying = spec.saying || 'meow';
+			var that = mammal(spec);
+			that.purr = function(n){
+				var i,s = '';
+				for(i=0; i<n; i += 1){
+					if(s) {
+						s += '-';
+					}
+					s += 'r';
+				}
+				return s;
+			};
+			that.get_name = function(){
+				return this.says() + ' ' + spec.name + ' ' + this.says();
+			};
+			return that;
+		};
+		var myCat = cat({name: 'Henrietta'});
+
+		Object.method('superior', function(name){
+			var that = this;
+			var method = that[name];
+			return function() {
+				return method.apply(that, arguments);
+			};
+		})
+		var coolcat = function(spec){
+			var that = cat(spec);
+			var super_get_name = that.superior('get_name');
+			that.get_name = function(n){
+				return 'like '+super_get_name()+' baby';
+			};
+			return that;
+		};
+		var myCoolcat = coolcat({name: 'Bix'});
+		var name = myCoolcat.get_name();
+
+	클래스 구성을 위한 부속품
+		var eventuality = function(that){
+			var registry = {};
+			that.on = function(type, method, parameters){
+				var handler = {
+					method: method,
+					parameters: parameters
+				};
+				if(registry.hawOwnProperty(type)){
+					retistry[type].push(handler);
+				} else {
+					registry[type] = [handler];
+				}
+				return this;
+			};
+			that.fire = function(event){
+				var array, func, handler, i, type = typeof event === 'string' ? event : event.type;
+
+				if(registry.hasOwnProperty(type)) {
+					array = registry[type];
+					for(i=0; i <array.length; i +=1){
+						handler = array[i];
+						func = handler.method;
+						if(typeof func === 'string') {
+							func = this[func];
+						}
+						func.apply(this, handler.parameters||[event]);
+					}
+				}
+				return this;
+			};
+			return that;
+		};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
